@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ML Experiment Tracker</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --accent: #ff4757;
+    --accent-hover: #ff6b7a; --success: #2ea043; --success-bg: #0d2818;
+    --error: #f85149; --error-bg: #2a1215;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    margin: 0; padding: 0;
+  }
+  header {
+    padding: 24px 32px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  header h1 { margin: 0; font-size: 22px; }
+  nav { display: flex; gap: 8px; padding: 16px 32px 0; border-bottom: 1px solid var(--border); }
+  nav button {
+    background: none; border: none; color: var(--muted); padding: 12px 18px;
+    cursor: pointer; font-size: 15px; border-bottom: 2px solid transparent;
+  }
+  nav button.active { color: var(--text); border-bottom-color: var(--accent); }
+  main { padding: 28px 32px; max-width: 1100px; margin: 0 auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 22px; margin-bottom: 20px;
+  }
+  .card h2 { margin-top: 0; font-size: 17px; }
+  .card h3 { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  label { display: block; margin: 14px 0 6px; font-size: 14px; color: var(--muted); }
+  input[type=text], input[type=file] {
+    width: 100%; padding: 10px 12px; background: #0d1117; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 14px;
+  }
+  .dropzone {
+    border: 1.5px dashed var(--border); border-radius: 8px; padding: 24px; text-align: center;
+    cursor: pointer; color: var(--muted); transition: border-color .15s;
+  }
+  .dropzone:hover, .dropzone.dragover { border-color: var(--accent); color: var(--text); }
+  .dropzone.has-file { border-color: var(--success); color: var(--text); }
+  button.btn {
+    background: var(--accent); color: white; border: none; padding: 10px 20px;
+    border-radius: 6px; font-size: 14px; cursor: pointer; margin-top: 14px;
+  }
+  button.btn:hover { background: var(--accent-hover); }
+  button.btn:disabled { background: #30363d; color: var(--muted); cursor: not-allowed; }
+  button.btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .checkbox-row { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
+  .checkbox-row input { width: 16px; height: 16px; }
+  .model-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 10px; margin-top: 8px; }
+  .model-chip {
+    border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; cursor: pointer;
+    font-size: 14px; user-select: none;
+  }
+  .model-chip.selected { border-color: var(--accent); background: rgba(255,71,87,.08); }
+  .banner { padding: 12px 16px; border-radius: 6px; margin: 14px 0; font-size: 14px; }
+  .banner.success { background: var(--success-bg); color: #7ee2a8; border: 1px solid #1f5c34; }
+  .banner.error { background: var(--error-bg); color: #ff9891; border: 1px solid #6e2323; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; cursor: pointer; }
+  th:hover { color: var(--text); }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite;
+    margin-right: 8px; vertical-align: middle;
+  }
+  .dropdown-multiselect { position: relative; }
+.dropdown-toggle {
+  border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px;
+  background: #0d1117; color: var(--text); cursor: pointer; font-size: 14px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.dropdown-toggle:hover { border-color: var(--accent); }
+.dropdown-panel {
+  display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px; z-index: 10; max-height: 260px; overflow-y: auto;
+}
+.dropdown-panel.open { display: block; }
+.dropdown-option {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-radius: 6px; cursor: pointer; font-size: 14px;
+}
+.dropdown-option:hover { background: rgba(255,255,255,.04); }
+.dropdown-option input { width: 15px; height: 15px; }
+.dropdown-actions { display: flex; gap: 8px; padding: 6px 10px 2px; border-top: 1px solid var(--border); margin-top: 6px; }
+.dropdown-actions button {
+  background: none; border: none; color: var(--accent); font-size: 12px; cursor: pointer; padding: 4px 0;
+}
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .muted { color: var(--muted); font-size: 13px; }
+  select { background: #0d1117; color: var(--text); border: 1px solid var(--border); padding: 8px; border-radius: 6px; }
+  textarea {
+    width: 100%; background: #0d1117; color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px; font-family: monospace; font-size: 13px; min-height: 80px;
+  }
+  .radio-row { display: flex; gap: 18px; margin: 10px 0; font-size: 14px; }
+  .radio-row label { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--text); }
+  .bar-chart {
+  display: flex; align-items: flex-end; gap: 14px; height: 200px; margin-top: 20px;
+  padding: 20px 10px 0; background: #0d1117; border-radius: 10px; border: 1px solid var(--border);
+}
+.bar {
+  border-radius: 6px 6px 0 0; flex: 1; position: relative; min-height: 4px;
+  transition: opacity .15s;
+}
+.bar:hover { opacity: 0.85; }
+.bar span {
+  position: absolute; top: -22px; left: 0; right: 0; text-align: center;
+  font-size: 12px; font-weight: 600; color: var(--text);
+}
+.bar label {
+  position: absolute; bottom: -24px; left: 0; right: 0; text-align: center;
+  font-size: 11px; color: var(--muted); margin: 0;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧪 ML Experiment Tracker</h1>
+</header>
+
+<nav>
+  <button class="tab-btn active" data-page="upload">Upload &amp; Train</button>
+  <button class="tab-btn" data-page="compare">Compare Experiments</button>
+  <button class="tab-btn" data-page="production">Production</button>
+</nav>
+
+<main>
+
+  <!-- UPLOAD & TRAIN -->
+  <div id="page-upload" class="page active">
+    <div class="card">
+      <h2>Step 1 — Upload dataset</h2>
+      <div class="dropzone" id="dropzone">
+        <div id="dropzone-text">Click to choose a CSV file, or drag it here</div>
+        <input type="file" id="fileInput" accept=".csv" style="display:none">
+      </div>
+      <label for="targetCol">Target column name</label>
+      <input type="text" id="targetCol" placeholder="e.g. Class">
+      <button class="btn" id="uploadBtn">Upload dataset</button>
+      <div id="uploadBanner"></div>
+    </div>
+
+    <div class="card" id="trainCard" style="display:none">
+      <h2>Step 2 — Train &amp; compare models</h2>
+      <p class="muted" id="datasetSummary"></p>
+
+      <h3>Models</h3>
+      <div class="dropdown-multiselect">
+  <div class="dropdown-toggle" id="modelDropdownToggle">
+    <span id="modelDropdownLabel">Select models</span>
+    <span>▾</span>
+  </div>
+  <div class="dropdown-panel" id="modelDropdownPanel">
+    <div id="modelOptionsList"></div>
+    <div class="dropdown-actions">
+      <button type="button" id="selectAllModels">Select all</button>
+      <button type="button" id="clearAllModels">Clear all</button>
+    </div>
+  </div>
+</div>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="outlierCheck">
+        <label for="outlierCheck" style="margin:0">Cap outliers (IQR method)</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="imbalanceCheck" checked>
+        <label for="imbalanceCheck" style="margin:0">Handle class imbalance (balanced weighting)</label>
+      </div>
+
+      <button class="btn" id="trainBtn">Train selected models</button>
+      <div id="trainBanner"></div>
+      <div id="trainResults"></div>
+    </div>
+  </div>
+
+  <!-- COMPARE EXPERIMENTS -->
+  <div id="page-compare" class="page">
+    <div class="card">
+  <h2>All experiments</h2>
+  <label for="datasetFilter">Filter by dataset</label>
+  <select id="datasetFilter"></select>
+  <label for="sortSelect">Sort by</label>
+  <select id="sortSelect"></select>
+  <div id="compareTableWrap"></div>
+  <div class="bar-chart" id="barChart"></div>
+</div>
+  </div>
+
+  <!-- PRODUCTION -->
+  <div id="page-production" class="page">
+    <div class="card">
+      <h2>Current production model</h2>
+      <div id="prodStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2>Promote a model</h2>
+      <label for="promoteDatasetFilter">Dataset (by target column)</label>
+      <select id="promoteDatasetFilter"></select>
+      <div class="radio-row">
+        <label><input type="radio" name="promoteMode" value="auto" checked> Auto-pick best by metric</label>
+        <label><input type="radio" name="promoteMode" value="manual"> Choose specific experiment</label>
+      </div>
+      <div id="promoteAuto">
+        <label for="metricName">Metric to optimize</label>
+        <input type="text" id="metricName" value="f1_score">
+      </div>
+      <div id="promoteManual" style="display:none">
+        <label for="expSelect">Experiment</label>
+        <select id="expSelect"></select>
+      </div>
+      <button class="btn" id="promoteBtn">Promote</button>
+      <div id="promoteBanner"></div>
+    </div>
+
+    <div class="card">
+      <h2>Quick test prediction</h2>
+      <p class="muted">Paste a JSON list of records matching your training columns (minus the target).</p>
+      <textarea id="predictInput">[{"Time": 0, "Amount": 55.0}]</textarea>
+      <button class="btn secondary" id="predictBtn">Run prediction</button>
+      <div id="predictResult"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const API_BASE = "";  // same origin, since FastAPI serves this file too
+
+// ---------- Tab navigation ----------
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("page-" + btn.dataset.page).classList.add("active");
+    if (btn.dataset.page === "compare") loadExperiments();
+    if (btn.dataset.page === "production") loadProduction();
+  };
+});
+
+function banner(el, msg, type) {
+  el.innerHTML = `<div class="banner ${type}">${msg}</div>`;
+}
+
+// ---------- Upload ----------
+let selectedFile = null;
+let state = { datasetId: null, storedPath: null, targetColumn: null };
+
+const dropzone = document.getElementById("dropzone");
+const fileInput = document.getElementById("fileInput");
+dropzone.onclick = () => fileInput.click();
+dropzone.ondragover = e => { e.preventDefault(); dropzone.classList.add("dragover"); };
+dropzone.ondragleave = () => dropzone.classList.remove("dragover");
+dropzone.ondrop = e => {
+  e.preventDefault(); dropzone.classList.remove("dragover");
+  if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+};
+fileInput.onchange = () => { if (fileInput.files.length) setFile(fileInput.files[0]); };
+
+function setFile(file) {
+  selectedFile = file;
+  dropzone.classList.add("has-file");
+  document.getElementById("dropzone-text").textContent = `Selected: ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
+}
+
+document.getElementById("uploadBtn").onclick = async () => {
+  const targetCol = document.getElementById("targetCol").value.trim();
+  const uploadBanner = document.getElementById("uploadBanner");
+  if (!selectedFile) return banner(uploadBanner, "Please choose a CSV file first.", "error");
+  if (!targetCol) return banner(uploadBanner, "Please enter the target column name.", "error");
+
+  banner(uploadBanner, '<span class="spinner"></span>Uploading and validating...', "success");
+  const formData = new FormData();
+  formData.append("file", selectedFile);
+  formData.append("target_column", targetCol);
+
+  try {
+    const res = await fetch(`${API_BASE}/upload`, { method: "POST", body: formData });
+    const data = await res.json();
+    if (!res.ok) return banner(uploadBanner, data.detail || "Upload failed", "error");
+
+    state.datasetId = data.dataset_id;
+    state.storedPath = data.stored_path;
+    state.targetColumn = targetCol;
+
+    banner(uploadBanner, `Dataset ready — ${data.n_rows.toLocaleString()} rows, ${data.n_columns} columns.`, "success");
+    document.getElementById("trainCard").style.display = "block";
+    document.getElementById("datasetSummary").textContent =
+      `Using dataset_id: ${state.datasetId}, target: "${state.targetColumn}"`;
+    await loadModelOptions();
+  } catch (e) {
+    banner(uploadBanner, "Network error: " + e.message, "error");
+  }
+};
+
+// ---------- Model selection ----------
+let selectedModels = new Set();
+
+async function loadModelOptions() {
+  const res = await fetch(`${API_BASE}/models/available`);
+  const data = await res.json();
+  const list = document.getElementById("modelOptionsList");
+  list.innerHTML = "";
+  selectedModels = new Set(data.models); // default: all selected
+
+  data.models.forEach(m => {
+    const row = document.createElement("label");
+    row.className = "dropdown-option";
+    row.innerHTML = `<input type="checkbox" checked value="${m}"> ${m}`;
+    row.querySelector("input").onchange = (e) => {
+      if (e.target.checked) selectedModels.add(m);
+      else selectedModels.delete(m);
+      updateModelDropdownLabel();
+    };
+    list.appendChild(row);
+  });
+  updateModelDropdownLabel();
+}
+
+function updateModelDropdownLabel() {
+  const label = document.getElementById("modelDropdownLabel");
+  const n = selectedModels.size;
+  label.textContent = n === 0 ? "Select models" : `${n} model${n > 1 ? "s" : ""} selected`;
+}
+
+const modelToggle = document.getElementById("modelDropdownToggle");
+const modelPanel = document.getElementById("modelDropdownPanel");
+modelToggle.onclick = (e) => {
+  e.stopPropagation();
+  modelPanel.classList.toggle("open");
+};
+document.addEventListener("click", (e) => {
+  if (!modelPanel.contains(e.target) && e.target !== modelToggle) {
+    modelPanel.classList.remove("open");
+  }
+});
+
+document.getElementById("selectAllModels").onclick = () => {
+  document.querySelectorAll("#modelOptionsList input").forEach(cb => { cb.checked = true; selectedModels.add(cb.value); });
+  updateModelDropdownLabel();
+};
+document.getElementById("clearAllModels").onclick = () => {
+  document.querySelectorAll("#modelOptionsList input").forEach(cb => { cb.checked = false; selectedModels.delete(cb.value); });
+  updateModelDropdownLabel();
+};
+
+// ---------- Train ----------
+document.getElementById("trainBtn").onclick = async () => {
+  const trainBanner = document.getElementById("trainBanner");
+  const trainResults = document.getElementById("trainResults");
+  if (selectedModels.size === 0) return banner(trainBanner, "Select at least one model.", "error");
+
+  banner(trainBanner, `<span class="spinner"></span>Training ${selectedModels.size} model(s)... this can take a few minutes on large datasets.`, "success");
+  trainResults.innerHTML = "";
+
+  const payload = {
+    dataset_id: state.datasetId,
+    dataset_filepath: state.storedPath,
+    target_column: state.targetColumn,
+    model_names: Array.from(selectedModels),
+    handle_outliers: document.getElementById("outlierCheck").checked,
+    handle_class_imbalance: document.getElementById("imbalanceCheck").checked,
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/train`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) return banner(trainBanner, data.detail || "Training failed", "error");
+
+    banner(trainBanner, "Training complete.", "success");
+    let rows = data.results.map(r => `<tr><td>${r.model_type}</td>${
+      Object.values(r.metrics).map(v => `<td>${v}</td>`).join("")
+    }</tr>`).join("");
+    let headers = Object.keys(data.results[0].metrics).map(k => `<th>${k}</th>`).join("");
+    trainResults.innerHTML = `
+      <h3>Preprocessing report</h3>
+      <pre class="muted" style="white-space:pre-wrap;background:#0d1117;padding:12px;border-radius:6px;border:1px solid var(--border);">${
+        JSON.stringify(data.preprocessing_report, null, 2)
+      }</pre>
+      <h3>Results</h3>
+      <table><tr><th>model</th>${headers}</tr>${rows}</table>
+    `;
+  } catch (e) {
+    banner(trainBanner, "Network error: " + e.message, "error");
+  }
+};
+
+// ---------- Compare Experiments ----------
+let allExperiments = [];
+async function loadExperiments() {
+  const res = await fetch(`${API_BASE}/experiments`);
+  const data = await res.json();
+  allExperiments = data.experiments;
+  if (allExperiments.length === 0) {
+    document.getElementById("compareTableWrap").innerHTML = '<p class="muted">No experiments logged yet.</p>';
+    document.getElementById("datasetFilter").innerHTML = "";
+    return;
+  }
+
+  // Build dataset filter options — one per unique dataset_id
+  const datasetMap = new Map();
+  allExperiments.forEach(e => {
+    if (!datasetMap.has(e.dataset_id)) {
+      datasetMap.set(e.dataset_id, {
+        id: e.dataset_id,
+        target: e.dataset_target_column,
+        rows: e.dataset_n_rows,
+      });
+    }
+  });
+  const filterSelect = document.getElementById("datasetFilter");
+  filterSelect.innerHTML = `<option value="all">All datasets</option>` +
+    Array.from(datasetMap.values()).map(d =>
+      `<option value="${d.id}">Dataset #${d.id} — target: ${d.target}, ${d.rows?.toLocaleString() || "?"} rows</option>`
+    ).join("");
+  filterSelect.onchange = renderCompareTable;
+
+  const metricKeys = Object.keys(JSON.parse(allExperiments[0].metrics));
+  const sortSelect = document.getElementById("sortSelect");
+  sortSelect.innerHTML = metricKeys.map(k => `<option value="${k}">${k}</option>`).join("");
+  sortSelect.onchange = renderCompareTable;
+  renderCompareTable();
+}
+
+function renderCompareTable() {
+  const sortKey = document.getElementById("sortSelect").value;
+  const filterVal = document.getElementById("datasetFilter").value;
+
+  let rows = allExperiments.map(e => ({ ...e, m: JSON.parse(e.metrics) }));
+  if (filterVal !== "all") {
+    rows = rows.filter(e => String(e.dataset_id) === filterVal);
+  }
+  rows.sort((a, b) => (b.m[sortKey] || 0) - (a.m[sortKey] || 0));
+
+  if (rows.length === 0) {
+    document.getElementById("compareTableWrap").innerHTML = '<p class="muted">No experiments for this dataset.</p>';
+    document.getElementById("barChart").innerHTML = "";
+    return;
+  }
+
+  const metricKeys = Object.keys(rows[0].m);
+  let html = `<table><tr><th>id</th><th>model</th><th>trained_at</th>${
+    metricKeys.map(k => `<th>${k}</th>`).join("")
+  }</tr>`;
+  rows.forEach(r => {
+    html += `<tr><td>${r.id}</td><td>${r.model_type}</td><td>${r.trained_at.slice(0,19)}</td>${
+      metricKeys.map(k => `<td>${r.m[k] ?? "-"}</td>`).join("")
+    }</tr>`;
+  });
+  html += "</table>";
+  document.getElementById("compareTableWrap").innerHTML = html;
+
+  const topRows = rows.slice(0, 8);
+  const values = topRows.map(r => r.m[sortKey] || 0);
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const range = max - min || 1;
+
+  // Color scale: best performer gets the accent color, rest fade toward a
+  // muted blue-grey — makes the winner pop instead of every bar looking identical.
+  const colors = ["#ff4757", "#ff6b7a", "#e8748a", "#c97fa0", "#a888b8", "#8b91d0", "#6e9de8", "#4facfe"];
+
+  document.getElementById("barChart").innerHTML = topRows.map((r, i) => {
+    // Baseline of 15% so even the lowest bar is visibly present, then scale
+    // the rest of the height by how close each value is to the max —
+    // exaggerates real differences instead of letting clustered values
+    // (e.g. 0.71-0.77) all look like full-height bars.
+    const h = 15 + ((r.m[sortKey] - min) / range) * 85;
+    return `<div class="bar" style="height:${h}%;background:${colors[i] || colors[colors.length-1]}">
+      <span>${r.m[sortKey]}</span><label>${r.model_type}</label>
+    </div>`;
+  }).join("");
+}
+
+// ---------- Production ----------
+async function loadProduction() {
+  const res = await fetch(`${API_BASE}/production`);
+  const el = document.getElementById("prodStatus");
+  if (res.ok) {
+    const data = await res.json();
+    el.innerHTML = `<div class="banner success">Live model: <b>${data.model_type}</b> — target: ${data.dataset_target_column} (experiment #${data.id})</div>`;
+  } else {
+    el.innerHTML = `<div class="banner error">No model is currently in production.</div>`;
+  }
+
+  const expRes = await fetch(`${API_BASE}/experiments`);
+  const allExps = expRes.ok ? (await expRes.json()).experiments : [];
+
+  // Populate dataset filter — one entry per unique dataset, labeled by target column
+  const datasetMap = new Map();
+  allExps.forEach(e => {
+    if (!datasetMap.has(e.dataset_id)) {
+      datasetMap.set(e.dataset_id, { id: e.dataset_id, target: e.dataset_target_column, rows: e.dataset_n_rows });
+    }
+  });
+  const dsFilter = document.getElementById("promoteDatasetFilter");
+  dsFilter.innerHTML = Array.from(datasetMap.values()).map(d =>
+    `<option value="${d.id}">Dataset #${d.id} — target: ${d.target}, ${d.rows?.toLocaleString() || "?"} rows</option>`
+  ).join("");
+  dsFilter.onchange = () => populateExpDropdown(allExps);
+
+  populateExpDropdown(allExps);
+}
+
+function populateExpDropdown(allExps) {
+  const dsId = document.getElementById("promoteDatasetFilter").value;
+  const filtered = allExps.filter(e => String(e.dataset_id) === dsId);
+  const sel = document.getElementById("expSelect");
+  sel.innerHTML = filtered.map(e =>
+    `<option value="${e.id}">#${e.id} - ${e.model_type} (${e.trained_at.slice(0,19)})</option>`
+  ).join("");
+}
+
+document.getElementById("promoteBtn").onclick = async () => {
+  const mode = document.querySelector('input[name=promoteMode]:checked').value;
+  const promoteBanner = document.getElementById("promoteBanner");
+  const dsId = parseInt(document.getElementById("promoteDatasetFilter").value);
+
+  const payload = mode === "auto"
+    ? { metric_name: document.getElementById("metricName").value, higher_is_better: true, dataset_id: dsId }
+    : { experiment_id: parseInt(document.getElementById("expSelect").value) };
+
+  const res = await fetch(`${API_BASE}/promote`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) return banner(promoteBanner, data.detail || "Promotion failed", "error");
+  banner(promoteBanner, `Promoted: ${data.promoted_experiment.model_type}`, "success");
+  loadProduction();
+};
+document.getElementById("predictBtn").onclick = async () => {
+  const el = document.getElementById("predictResult");
+  try {
+    const records = JSON.parse(document.getElementById("predictInput").value);
+    const res = await fetch(`${API_BASE}/predict`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ records })
+    });
+    const data = await res.json();
+    if (!res.ok) return banner(el, data.detail || "Prediction failed", "error");
+    el.innerHTML = `<pre class="muted">${JSON.stringify(data, null, 2)}</pre>`;
+  } catch (e) {
+    banner(el, "Invalid JSON or network error: " + e.message, "error");
+  }
+};
+</script>
+
+</body>
+</html>
