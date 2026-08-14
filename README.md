@@ -136,3 +136,7 @@ Open `http://127.0.0.1:8000` in your browser.
 - Automated hyperparameter tuning per model, logged as additional experiment variants
 
 - 🔗 **[Live Demo](https://ml-experiment-tracker-dkj5.onrender.com)** — note: free tier spins down after inactivity, so the first request may take 30-60 seconds to wake up.
+
+## Known limitation — free-tier deployment
+
+On Render's free tier, training all 6 models simultaneously with outlier capping and class-imbalance handling enabled can exceed the platform's request timeout and shared-CPU limits, causing the request to fail. Training 1-3 models at a time works reliably on the live demo. Locally (or on a paid hosting tier with more resources), all 6 models train without issue — this is a hosting constraint, not a bug in the platform itself.
