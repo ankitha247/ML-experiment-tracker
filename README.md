@@ -21,7 +21,6 @@ Most ML portfolio projects stop at "I trained a model and got X% accuracy." This
 - **Models:** Logistic Regression, Decision Tree, Random Forest, Gradient Boosting, Gaussian Naive Bayes, KNN
 
 ## Folder structure
-## Folder structure
 
 ```
 ml-experiment-tracker/
