@@ -134,3 +134,5 @@ Open `http://127.0.0.1:8000` in your browser.
 - Multi-class classification support (currently binary only)
 - Configurable decision threshold at inference time, instead of the fixed 0.5 default
 - Automated hyperparameter tuning per model, logged as additional experiment variants
+
+- 🔗 **[Live Demo](https://ml-experiment-tracker-dkj5.onrender.com)** — note: free tier spins down after inactivity, so the first request may take 30-60 seconds to wake up.
