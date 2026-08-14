@@ -1,3 +1,50 @@
+# ML Experiment Tracking Platform
+
+A full-stack MLOps platform for uploading datasets, training and comparing multiple ML models, tracking experiment history, and deploying the best model behind a live prediction API — built to demonstrate ML engineering skills beyond "train one model in a notebook."
+
+## What it does
+
+1. **Upload** a CSV dataset and specify the target column
+2. **Train** up to 6 classification algorithms simultaneously, with configurable outlier handling and class-imbalance correction
+3. **Compare** every experiment ever run, filterable by dataset, sortable by any metric
+4. **Promote** the best model (auto-selected by metric, or chosen manually) to production
+5. **Predict** via a live REST API, accepting raw human-readable input (no manual encoding required)
+
+## Why this project
+
+Most ML portfolio projects stop at "I trained a model and got X% accuracy." This project is about the layer most tutorials skip: **experiment reproducibility, model comparison, and deployment infrastructure** — the actual day-to-day work of an ML engineer, not just a data scientist.
+
+## Tech stack
+
+- **Backend:** FastAPI, SQLite, scikit-learn, pandas, joblib
+- **Frontend:** Vanilla HTML/CSS/JS (served directly by FastAPI — single deployable process)
+- **Models:** Logistic Regression, Decision Tree, Random Forest, Gradient Boosting, Gaussian Naive Bayes, KNN
+
+## Folder structure
+## Folder structure
+
+```
+ml-experiment-tracker/
+├── core/
+│   ├── __init__.py
+│   ├── db.py               # SQLite schema: datasets, experiments, production_model
+│   ├── dataset_manager.py  # Upload, SHA-256 versioning, validation
+│   ├── trainer.py          # Preprocessing, training, preprocessing pipeline system
+│   └── registry.py         # Best-model selection and promotion logic
+├── api/
+│   ├── __init__.py
+│   ├── main.py              # FastAPI endpoints
+│   └── static/
+│       └── index.html       # Frontend (HTML/CSS/JS)
+├── storage/
+│   ├── datasets/             # Versioned uploaded CSVs
+│   ├── models/                # Serialized model + pipeline bundles (.joblib)
+│   └── tracker.db             # SQLite database
+├── requirements.txt
+├── .gitignore
+└── README.md
+```
+
 ## Key design decisions
 
 **Dataset versioning by content hash, not filename.** Re-uploading identical data doesn't create duplicates — the file is hashed (SHA-256) and matched against existing records.
@@ -49,9 +96,30 @@ This project was built with genuine iterative debugging, not a clean first pass.
 
 The promoted Random Forest model was stress-tested against a batch of 17 confirmed real fraud transactions and correctly caught 15 of them (~88%), consistent with its measured 78.6% recall on the held-out test set.
 
+## API endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/upload` | Upload a CSV, get back dataset_id + validation info |
+| GET | `/models/available` | List available model types |
+| POST | `/train` | Train one or more models on an uploaded dataset |
+| GET | `/experiments` | List all logged experiments |
+| POST | `/promote` | Promote an experiment (auto-pick or manual) to production |
+| GET | `/production` | View the currently deployed model |
+| POST | `/predict` | Run inference using the production model |
+
 ## Running locally
 
 ```bash
+# Clone the repo
+git clone https://github.com/YOUR_USERNAME/ml-experiment-tracker.git
+cd ml-experiment-tracker
+
+# Create and activate a virtual environment
+python -m venv venv
+venv\Scripts\activate      # Windows
+source venv/bin/activate   # Mac/Linux
+
 # Install dependencies
 pip install -r requirements.txt
 
