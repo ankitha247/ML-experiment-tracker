@@ -398,7 +398,15 @@ document.getElementById("trainBtn").onclick = async () => {
       <table><tr><th>model</th>${headers}</tr>${rows}</table>
     `;
   } catch (e) {
-    banner(trainBanner, "Network error: " + e.message, "error");
+    // A JSON parse error here usually means the hosting platform's proxy
+    // returned its own HTML error page instead of our API's JSON response —
+    // typically because the request took too long (e.g. training many
+    // models at once on a free-tier server with limited CPU/timeout).
+    const isLikelyTimeout = e.message.includes("Unexpected token") || e.message.includes("JSON");
+    const msg = isLikelyTimeout
+      ? "The server took too long to respond — this can happen when training several models at once on limited hosting resources. Try selecting fewer models (1-3) and retry."
+      : "Network error: " + e.message;
+    banner(trainBanner, msg, "error");
   }
 };
 
@@ -531,7 +539,9 @@ function populateExpDropdown(allExps) {
 document.getElementById("promoteBtn").onclick = async () => {
   const mode = document.querySelector('input[name=promoteMode]:checked').value;
   const promoteBanner = document.getElementById("promoteBanner");
-  const dsId = parseInt(document.getElementById("promoteDatasetFilter").value);
+  const dsId = parseInt(document.getElementById("promoteDatasetFilter").value);} catch (e) {
+    banner(trainBanner, "Network error: " + e.message, "error");
+  }
 
   const payload = mode === "auto"
     ? { metric_name: document.getElementById("metricName").value, higher_is_better: true, dataset_id: dsId }
