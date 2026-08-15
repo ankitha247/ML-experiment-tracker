@@ -539,9 +539,7 @@ function populateExpDropdown(allExps) {
 document.getElementById("promoteBtn").onclick = async () => {
   const mode = document.querySelector('input[name=promoteMode]:checked').value;
   const promoteBanner = document.getElementById("promoteBanner");
-  const dsId = parseInt(document.getElementById("promoteDatasetFilter").value);} catch (e) {
-    banner(trainBanner, "Network error: " + e.message, "error");
-  }
+  const dsId = parseInt(document.getElementById("promoteDatasetFilter").value);
 
   const payload = mode === "auto"
     ? { metric_name: document.getElementById("metricName").value, higher_is_better: true, dataset_id: dsId }
